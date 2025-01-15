@@ -1,7 +1,12 @@
-use std::path::PathBuf;
+mod conversation;
+mod context;
 
+use std::path::PathBuf;
+use anyhow::Result;
 use clap::{command, Parser};
-use discord::client::DiscordClientBuilder;
+use context::Context;
+use discord::{client::DiscordClientBuilder, model::Snowflake, MessageFetchRate};
+use discord::StreamExt;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -12,11 +17,11 @@ struct Cli {
     
     /// ID of the user whose messages are prioritized in downloading
     #[arg(short, long, value_name = "ID")]
-    user: String,
+    user: Snowflake,
 
     /// ID of the channel to download from
     #[arg(short, long, value_name = "ID")]
-    channel: String,
+    channel: Snowflake,
     
     /// Custom output filename
     #[arg(short, long, value_name = "NAME")]
@@ -24,24 +29,36 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let auth = cli.auth;
     let uid = cli.user;
     let cid = cli.channel;
 
-    let client = match DiscordClientBuilder::new(&auth)
-        .set_user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.94 Chrome/37.0.2062.94 Safari/537.36")
-        .build().await {
-        Err(e) => {
-            eprintln!("{e}");
-            return;
-        },
-        Ok(client) => {
-            client
-        }
-    };
+    let client = DiscordClientBuilder::new(&auth)
+        .set_random_agent(1)
+        .build().await?;
+    let mut ctx = Context::new();
 
-    println!("Hello, world! {}", auth);
+    println!("Hello, {}!", client.me_cached().username);
+
+    let mut msg_stream = client.messages(&cid, MessageFetchRate::Default);
+
+    while let Some(chunk) = msg_stream.next().await {
+        match chunk {
+            Ok(msgs) => {
+                ctx.add_chunk(&msgs);
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                break;
+            }
+        }
+    }
+
+    let out = cli.out.unwrap_or(format!("{uid}_{cid}"));
+    println!("Saving context as {out}");
+
+    Ok(())
 }

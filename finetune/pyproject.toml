@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "finetune"
+version = "0.1.0"
+description = ""
+authors = ["Hewitt <wangh3@bxscience.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+numpy = "^2.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

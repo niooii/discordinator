@@ -640,6 +640,7 @@ dependencies = [
 name = "downloader"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "discord",
  "tokio",
