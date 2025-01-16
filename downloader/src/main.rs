@@ -44,8 +44,13 @@ async fn main() -> Result<()> {
     println!("Hello, {}!", client.me_cached().username);
 
     let mut msg_stream = client.messages(&cid, MessageFetchRate::Default);
-
+    const FETCH_COUNT: usize = 100;
+    let mut i = 0;
     while let Some(chunk) = msg_stream.next().await {
+        i += 1;
+        if i > FETCH_COUNT {
+            break;
+        }
         match chunk {
             Ok(msgs) => {
                 ctx.add_chunk(&msgs);
@@ -59,6 +64,8 @@ async fn main() -> Result<()> {
 
     let out = cli.out.unwrap_or(format!("{uid}_{cid}"));
     println!("Saving context as {out}");
+    
+    ctx.save_to(PathBuf::from(out)).await;
 
     Ok(())
 }

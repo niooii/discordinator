@@ -643,6 +643,9 @@ dependencies = [
  "anyhow",
  "clap",
  "discord",
+ "serde",
+ "serde_json",
+ "time",
  "tokio",
 ]
 
