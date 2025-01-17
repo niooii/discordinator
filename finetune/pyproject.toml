@@ -11,6 +11,8 @@ numpy = "^2.2.1"
 torch = "^2.5.1"
 transformers = "^4.48.0"
 datasets = "^3.2.0"
+accelerate = "^1.2.1"
+tqdm = "^4.67.1"
 
 
 [build-system]
