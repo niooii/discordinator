@@ -6,3 +6,4 @@ dist/
 poetry.lock
 datasets
 finetuned*
+.env

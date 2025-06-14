@@ -52,21 +52,21 @@ class ChatModel:
         
     def gen_text(
         self,
-        input_text: str,
+        prompt: str,
         max_length: int = 100,
         temperature: float = 0.7,
         top_p: float = 0.9,
         num_return_sequences: int = 1
     ) -> list[str]:
         inputs = self.tokenizer(
-            input_text,
+            prompt,
             return_tensors="pt",
             padding=True,
             truncation=True
         ).to(self.device)
         
         gen_kwargs = {
-            "max_length": max_length,
+            "max_new_tokens": max_length,
             "temperature": temperature,
             "top_p": top_p,
             "num_return_sequences": num_return_sequences,
@@ -85,8 +85,8 @@ class ChatModel:
         for output in outputs:
             text = self.tokenizer.decode(output, skip_special_tokens=True)
             # remove prompt
-            if text.startswith(input_text):
-                text = text[len(input_text):].strip()
+            if text.startswith(prompt):
+                text = text[len(prompt):].strip()
             generated_texts.append(text)
             
         return generated_texts
@@ -126,25 +126,29 @@ class ChatModel:
         
         for epoch in range(epochs):
             epoch_loss = 0
-            for batch in tqdm(dataloader, desc=f"Finetuning [epoch {epoch+1}/{epochs}]"):
-                batch = {k: v.to(self.device) for k, v in batch.items()}
-                
-                outputs = self.model(**batch)
-                loss = outputs.loss
-                epoch_loss += loss.item()
-                
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
-            
-            if save_steps > 0 and epoch % save_steps == 0 and output_dir:
-                self.save(os.path.join(output_dir, f"checkpoint-{epoch}"))
-                print(f"Saved checkpoint {epoch}")
+            try:
+                for batch in tqdm(dataloader, desc=f"Finetuning [epoch {epoch+1}/{epochs}]"):
+                    batch = {k: v.to(self.device) for k, v in batch.items()}
                     
-            avg_loss = epoch_loss / len(dataloader)
-            print(f"Epoch {epoch + 1}/{epochs}, Average Loss: {avg_loss:.4f}")
+                    outputs = self.model(**batch)
+                    loss = outputs.loss
+                    epoch_loss += loss.item()
+                    
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+                
+                if save_steps > 0 and epoch % save_steps == 0 and output_dir:
+                    self.save(os.path.join(output_dir, f"checkpoint-{epoch}"))
+                    print(f"Saved checkpoint {epoch}")
+                        
+                avg_loss = epoch_loss / len(dataloader)
+                print(f"Epoch {epoch + 1}/{epochs}, Average Loss: {avg_loss:.4f}")
+            except KeyboardInterrupt:
+                print("Training interrupted..")
+                break
             
         self.model.eval()
         

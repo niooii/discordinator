@@ -22,13 +22,20 @@ class ChatDataset(Dataset):
         self.max_length = max_length
         
     def _filter_and_process_messages(self, messages: List[Turn], target_author: str) -> List[str]:
-        filtered_messages = [msg.content for msg in messages if msg.author.lower() == target_author.lower()]
+        filtered_messages = messages
         
         # no significant processing for now
         processed_messages = []
         for message in filtered_messages:
-            if message:
-                processed_messages.append(message)
+            if len(message.content) == 0:
+                message.content = "[ATTACHMENT]"
+            if message.author.lower() == target_author.lower():
+                author_label = "[ASSISTANT]" 
+            else:
+                author_label = "[OTHER]" 
+                
+            processed_message = f"{author_label}: {message.content}"
+            processed_messages.append(processed_message)
             
         return processed_messages
     
@@ -47,14 +54,12 @@ class ChatDataset(Dataset):
             return_tensors="pt"
         )
         
-        # Create input_ids and attention_mask
         input_ids = encoding["input_ids"].squeeze()
         attention_mask = encoding["attention_mask"].squeeze()
         
-        # For GPT-2 training, labels are the same as inputs
+        # for GPT-2 training at least
         labels = input_ids.clone()
         
-        # Mask out padding tokens in labels
         labels[attention_mask == 0] = -100
         
         return {
